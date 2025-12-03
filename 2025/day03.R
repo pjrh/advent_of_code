@@ -1,8 +1,6 @@
 
-library(stringr)
 library(purrr)
-library(dplyr)
-library(tidyr)
+library(stringr)
 library(tictoc)
 
 tic("Input prep")
