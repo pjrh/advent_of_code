@@ -19,22 +19,13 @@ M_in <- input |>
   purrr::map_vec(~as.numeric(.x)) |>
   matrix(nrow = nrows, ncol = ncols, byrow = TRUE)
 
-# Matrix where beam end is 1
+# Index of where beam starts
 B_in <- input |>
   str_split_1("\n") |>
   dplyr::first() |>
   str_locate("S") |>
   as.vector() |>
   unique()
-
-# Shift matrix upper
-S1 <- matrix(0, nrows, nrows)
-for (r in 1:(nrows-1)) {
-  S1[r, r+1] <- 1
-}
-
-# Shift matrix lower
-S2 = t(S1)
 
 beam_array_split <- function(beam_array, split_loc) {
   if (split_loc %in% beam_array) {
@@ -64,15 +55,11 @@ toc()
 tic("Part 1")
 
 split_counter <- 0
-M <- M_in
-B <- B_in
 B_dict <- dict()
-B_in %>%
-  purrr::walk(~B_dict$set(.x[[1]], 1))
+B_in %>% purrr::walk(~B_dict$set(.x[[1]], 1))
 
 for (r in 1:nrows) {
-  M <- S1 %*% M
-  splitters <- which(as.logical(M[1,]))
+  splitters <- which(as.logical(M_in[r,]))
   
   for (s in splitters) {
     if (s %in% unlist(B_dict$keys())) {
