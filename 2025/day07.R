@@ -47,14 +47,14 @@ beam_array_split <- function(beam_array, split_loc) {
 }
 
 beam_dict_split <- function(beam_dict, split_loc) {
-  if (split_loc %in% as.numeric(beam_dict$keys())) {
-    beam_dict$set(as.character(split_loc-1), 
-                  beam_dict$get(as.character(split_loc-1),0) + beam_dict$get(as.character(split_loc)))
+  if (split_loc %in% beam_dict$keys()) {
+    beam_dict$set(split_loc-1L, 
+                  beam_dict$get(split_loc-1L,0) + beam_dict$get(split_loc))
     
-    beam_dict$set(as.character(split_loc+1), 
-                  beam_dict$get(as.character(split_loc+1),0) + beam_dict$get(as.character(split_loc)))
+    beam_dict$set(split_loc+1L, 
+                  beam_dict$get(split_loc+1L,0) + beam_dict$get(split_loc))
     
-    beam_dict$remove(as.character(split_loc))
+    beam_dict$remove(split_loc)
   }
   return(beam_dict)
 }
@@ -66,7 +66,9 @@ tic("Part 1")
 split_counter <- 0
 M <- M_in
 B <- B_in
-B_dict <- dict(items = 1, keys = as.character(B_in))
+B_dict <- dict()
+B_in %>%
+  purrr::walk(~B_dict$set(.x[[1]], 1))
 
 for (r in 1:nrows) {
   M <- S1 %*% M
