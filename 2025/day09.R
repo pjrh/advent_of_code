@@ -137,8 +137,24 @@ box_boundary <- function(c1,c2) {
   generate_boundary(points)
 }
 
+# valid_area <- function(p1, p2) {
+#   return(length(intersect(box_boundary(p1,p2), ob))==0)
+# }
+
+
 valid_area <- function(p1, p2) {
-  return(length(intersect(box_boundary(p1,p2), ob))==0)
+  points <- c(p1, Re(p1) + Im(p2)*1i, p2, Re(p2) + Im(p1)*1i)
+  
+  crossing <- FALSE
+  for (i in 1:length(points)) {
+    ii <- i %% length(points) + 1
+    if(any(abs(Mod(points[i]-ob) + Mod(ob-points[ii]) - Mod(points[i]-points[ii])) < 1e-10)) {
+      crossing <- TRUE
+      break
+    }
+  }
+  
+  return(!crossing)
 }
 
 tic("Part 2 combos")
@@ -152,7 +168,6 @@ tic("Part 2 combos")
 p2_combos <- RcppAlgos::comboGeneral(input2, m=2)
 p2_combos_sorted <- p2_combos[order(p1_areas, decreasing = TRUE),]
 
-tic()
 i = 1
 repeat {
   if (valid_area(p2_combos_sorted[i,1], p2_combos_sorted[i,2])) break
@@ -160,12 +175,11 @@ repeat {
 }
 p2_ind <- which((p2_combos[,1] == p2_combos_sorted[i,1]) & (p2_combos[,2] == p2_combos_sorted[i,2]))
 p2_ans <- p1_areas[p2_ind]
-toc()
 
 toc()
 
 print("Part 2:")
 print(p2_ans)
-# too low: 140783340
 
 toc()
+
