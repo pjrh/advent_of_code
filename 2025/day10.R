@@ -1,7 +1,6 @@
 
 library(purrr)
 library(stringr)
-library(dplyr)
 library(tictoc)
 
 input <- readr::read_lines("day10_input.txt") |>
@@ -77,126 +76,228 @@ buttons_matrix <- function(buttons) {
 }
 
 
-# target <- input[[1]][[3]]
-# buttons <- input[[1]][[2]]
-# 
-# M <- buttons_matrix(buttons)
-# matlib::echelon(cbind(M, target))
-
-# [1,] 1 0 0 0 0 0 0 0 0 0 -1.0  0  1.0  103.0
-# [2,] 0 1 0 0 0 0 0 0 0 0  1.0  0  0.0   16.0
-# [3,] 0 0 1 0 0 0 0 0 0 0  3.0  0  0.0   48.0
-# [4,] 0 0 0 1 0 0 0 0 0 0 -3.0  0  0.0  -30.0
-# [5,] 0 0 0 0 1 0 0 0 0 0  0.0  1  0.0    3.0
-# [6,] 0 0 0 0 0 1 0 0 0 0  4.0 -1  0.0   51.0
-# [7,] 0 0 0 0 0 0 1 0 0 0 -2.5  1  0.5  -18.5
-# [8,] 0 0 0 0 0 0 0 1 0 0 -0.5  0 -0.5   11.5
-# [9,] 0 0 0 0 0 0 0 0 1 0 -0.5  0  0.5   17.5
-# [10,] 0 0 0 0 0 0 0 0 0 1 -2.0  0  0.0  -21.0
-# 
-# c <- b |> mutate(`1` = 103 + 1*`11` - `13`,
-#                  `2` = 16 - `11`,
-#                  `3` = 48 - 3*`11`,
-#                  `4` = -30 -3*`11`,
-#                  `5` = 3 - `12`,
-#                  `6` = 51  - 4*`11` +`12`,
-#                  `7` = -18.5 + 2.5*`11` -`12`-0.5*`13`,
-#                  `8` = 11.5 +0.5*`11` + 0.5*`12`,
-#                  `9` = 17.5 + 0.5*`11` + 0.5*`13`,
-#                  `10` = -21 +2*`11`)
-# 
-# c <- c %>%
-#   select(order(as.numeric(colnames(c))))
-
-find_presses2 <- function(buttons,target) {
-  
+tic("Part 2")
+p2_ans_arr <- array(dim = length(input))
+for (ans_i in 1:length(input)) {
+  #ans_i <- 111
+  #print(ans_i)
+  target <- input[[ans_i]][[3]]
+  buttons <- input[[ans_i]][[2]]
   M <- buttons_matrix(buttons)
+  colnames(M) <- as.character(1:length(buttons))
+  eschelon <- matlib::echelon(cbind(M, target))
   
-  rs <- rowSums(M)
-  row_ordering <- order(rs)
-  M_sort <- M[row_ordering,]
-  target_sort <- target[row_ordering]
+  pivot_cols <- list()
+  pivot_rows <- list()
+  ii <- 1
+  for (i in 1:dim(M)[1]) {
+    row <- eschelon[i,1:dim(eschelon)[2]-1]
+    first_1 <- which(row==1)[1]
+    check_zeros <- !is.na(first_1) && ifelse(first_1 == 1, TRUE, all(row[1:(first_1-1)]==0))
+    if (check_zeros) {
+      pivot_cols[ii] <- colnames(M)[first_1]
+      pivot_rows[ii] <- i
+      ii <- ii+1
+    }
+  }
+  names(pivot_rows) <- pivot_cols
   
+  free_vars <- setdiff(as.character(1:length(buttons)), pivot_cols)
   
-  b <- RcppAlgos::permuteGeneral(0:target_sort[1], m=sum(M_sort[1,]), repetition = TRUE,
+  if (length(free_vars) == 0) {
+    p2_ans_arr[ans_i] <- sum(eschelon[,"target"])
+  } else {
+    
+    permutes <- RcppAlgos::permuteGeneral(0:max(target), m=length(free_vars), repetition = TRUE)
+    colnames(permutes) <- free_vars
+    
+    permutes2 <- cbind(matrix(0,nrow = dim(permutes)[1], ncol = length(pivot_cols)), permutes)
+    colnames(permutes2)[1:length(pivot_cols)] <- pivot_cols
+    permutes2 <- permutes2[,order(as.numeric(colnames(permutes2)))]
+    
+    for (i in rev(pivot_cols)) {
+      permutes2[,i] = eschelon[pivot_rows[[i]],1+dim(M)[2]] - rowSums(sweep(permutes2, MARGIN = 2, eschelon[pivot_rows[[i]],1:dim(M)[2]], `*`))
+    }
+    
+    permutes2 <- permutes2[order(rowSums(permutes2)),]
+    permutes2 <- round(permutes2)
+    
+    for (row_ind in 1: dim(permutes2)[1]) {
+      check_perm <- permutes2[row_ind,,drop = FALSE]
+      
+      if (all(check_perm >=0) && all(M%*%t(check_perm)==target)) {
+        p2_ans_arr[ans_i] <- sum(check_perm)
+        break
+      }
+    }
+  }
+}
+print("Part 2:")
+print(sum(p2_ans_arr))
+toc()
+
+stop()
+# Everything below here was a waste of time because it was slow and 
+# couldn't do four of the inputs :(
+
+compile_constraints <- function(M,target) {
+  constraints <- list()
+  for (i in 1:dim(M)[1]) {
+    constraints[[i]] <- list("buttons" = as.character(which(as.logical(M[i,]))),
+                             "sum" = target[i])
+    
+  }
+  return(constraints)
+}
+
+find_constraint_order <- function(constraints, init_ind = NULL, verbose = TRUE) {
+  
+  ordering_cost <- c()
+  set_order <- c()
+  buttons_gen = c()
+  
+  constraints_out <- list()
+  
+  constraints_left <- constraints %>% 
+    imap(~list("buttons" = .x$buttons, "sum" = .x$sum, "index" = .y))
+  for (ordering in 1:length(constraints)) {
+    
+    constraints_choices <- constraints_left |>
+      map(\(x) {
+        new_cols <- setdiff(x$buttons, buttons_gen)
+        overlapping_cols <- intersect(buttons_gen, x$buttons)
+        if (is_empty(new_cols)) {
+          rough_perm_rows <- 1
+        } else {
+          rough_perm_rows <- RcppAlgos::permuteIter(0:x$sum,
+                                                    m = length(x$buttons)-length(overlapping_cols),
+                                                    constraintFun = "sum",
+                                                    comparisonFun = "==",
+                                                    limitConstraints = x$sum)$summary()$totalResults
+        }
+        
+        return(list("buttons" = x$buttons,
+                    "sum" = x$sum,
+                    "new_cols" = new_cols,
+                    "overlapping_cols" = overlapping_cols,
+                    "rough_perm_rows" = rough_perm_rows,
+                    "index" = x$index))
+      })
+    
+    new_col_opts <- constraints_choices |>
+      map_vec(~length(.x$new_cols))
+    
+    perm_cost_opts <- constraints_choices |>
+      map_vec(~.x$rough_perm_rows)
+    
+    if (ordering == 1) {
+      next_action <- "first gen"
+      if (is.null(init_ind)) {
+        next_constraint <- min(which(perm_cost_opts == min(perm_cost_opts)))
+      } else {
+        next_constraint <- init_ind
+      }
+      next_cost <- constraints_choices[[next_constraint]]$rough_perm_rows
+    } else if (any(new_col_opts == 0)) {
+      next_constraint <- min(which(new_col_opts == 0))
+      next_cost <- 1
+      next_action <- "filter"
+    } else if (any(new_col_opts == 1)) {
+      next_constraint <- min(which(new_col_opts == 1))
+      next_cost <- 1
+      next_action <- "constrained add"
+      
+    } else {
+      next_constraint <- min(which(perm_cost_opts == min(perm_cost_opts)))
+      next_cost <- constraints_choices[[next_constraint]]$rough_perm_rows
+      
+      if (length(constraints_choices[[next_constraint]]$overlapping_cols)>0) {
+        next_action <- "constrained permute"
+      } else {
+        next_action <- "unconstrained permute"
+      }
+    }
+    
+    constraints_out[ordering] <- constraints_choices[next_constraint]
+    constraints_out[[ordering]]$cost <- next_cost
+    constraints_out[[ordering]]$action <- next_action
+    constraints_left[next_constraint] <- NULL
+    buttons_gen <- union(buttons_gen, constraints_choices[[next_constraint]]$buttons)
+  }
+  
+  total_cost <- constraints_out |>
+    map_vec(~.x$cost) |>
+    prod()
+  if (verbose) print(paste("Rough max rows generated:", prettyNum(total_cost, big.mark = ",")))
+  return(constraints_out)
+}
+
+
+find_presses2 <- function(cons) {
+  
+  b <- RcppAlgos::permuteGeneral(0:cons[[1]]$sum, m=length(cons[[1]]$new_cols), repetition = TRUE,
                                  constraintFun = "sum",
                                  comparisonFun = "==",
-                                 limitConstraints = target_sort[1])
+                                 limitConstraints = cons[[1]]$sum)
   
-  b_buttons <- which(as.logical(M_sort[1,]))
+  colnames(b) <- cons[[1]]$new_cols
   
-  colnames(b) <- as.character(b_buttons)
-  b <- tibble::as_tibble(b)
-  
-  for (row_ind in 1:length(rs)) {
+  for (ind in 2:length(cons)) {
     
-    b2_buttons <- which(as.logical(M_sort[row_ind,]))
-    new_cols <- setdiff(as.character(b2_buttons), colnames(b))
-    overlapping_cols <- intersect(as.character(b2_buttons), colnames(b))
-    
-    if (is_empty(new_cols)) {
-      b <- b |>
-        mutate(s = rowSums(select(b,all_of(overlapping_cols)))) |>
-        filter(s == target_sort[row_ind]) |>
-        select(-s)
-    } else if (length(overlapping_cols) > 0) {
+    if (cons[[ind]]$action == "filter") {
+      b <- b[rowSums(b[,cons[[ind]]$buttons, drop = FALSE]) == cons[[ind]]$sum,, drop = FALSE]
+    } else if (cons[[ind]]$action == "constrained add") {
+      new_col <- matrix(cons[[ind]]$sum - rowSums(b[,cons[[ind]]$overlapping_cols, drop = FALSE]),ncol = 1)
+      colnames(new_col) <- cons[[ind]]$new_cols
+      b <- cbind(b, new_col)
+    } else if (cons[[ind]]$action == "constrained permute") {
       
-      rows_summed <- b |> 
-        dplyr::select(all_of(overlapping_cols)) |>
+      rows_summed <- b[,cons[[ind]]$overlapping_cols, drop = FALSE] |> 
         rowSums() |>
         unique()
       
-      b3 <- tibble::tibble(.rows = 0)
+      b3 <- matrix(nrow = 0, ncol = length(cons[[ind]]$buttons))
+      colnames(b3) <- cons[[ind]]$buttons
       for (rr in rows_summed) {
-        mm <- sum(M_sort[row_ind,])-length(overlapping_cols)
-        b2 <- RcppAlgos::permuteGeneral(0:(target_sort[row_ind]-rr), m=mm, repetition = TRUE,
+        b2 <- RcppAlgos::permuteGeneral(0:(cons[[ind]]$sum-rr), m=length(cons[[ind]]$new_cols), repetition = TRUE,
                                         constraintFun = "sum",
                                         comparisonFun = "==",
-                                        limitConstraints = target_sort[row_ind]-rr)
+                                        limitConstraints = cons[[ind]]$sum-rr)
         
-        colnames(b2) <- new_cols
-        b2 <- tibble::as_tibble(b2)
+        colnames(b2) <- cons[[ind]]$new_cols
+        b3 <- rbind(b3, merge(b[rowSums(b[,cons[[ind]]$overlapping_cols, drop = FALSE]) == rr,, drop = FALSE],
+                              b2,
+                              by = NULL))
         
-        c <- b |>
-          mutate(s = rowSums(select(b,all_of(overlapping_cols)))) |>
-          filter(s == rr) |>
-          select(-s)
-        b3 <- rbind(b3, dplyr::cross_join(c, b2))
         
       }
       b <- b3
-    }  else {
-      b2 <- RcppAlgos::permuteGeneral(0:(target_sort[row_ind]), m=sum(M_sort[row_ind,]), repetition = TRUE,
+    }  else if (cons[[ind]]$action == "unconstrained permute") {
+      b2 <- RcppAlgos::permuteGeneral(0:cons[[ind]]$sum, m=length(cons[[ind]]$new_cols), repetition = TRUE,
                                       constraintFun = "sum",
                                       comparisonFun = "==",
-                                      limitConstraints = target_sort[row_ind])
+                                      limitConstraints = cons[[ind]]$sum)
       
-      colnames(b2) <- b2_buttons
-      b2 <- tibble::as_tibble(b2)
+      colnames(b2) <- cons[[ind]]$buttons
       
-      b <- dplyr::cross_join(b,
-                             b2)
+      b <- merge(b,b2, by = NULL)
+    }
+    else {
+      stop()
     }
   }
   
-  
-  
-  Mb <- b %>%
-    dplyr::select(order(as.numeric(colnames(b)))) |>
-    as.matrix()
-  
-  
-  Mbs <- rowSums(Mb)
-  MBrow_ordering <- order(Mbs)
-  Mb <- Mb[MBrow_ordering,, drop=FALSE]
-  
-  
+  b <- b[order(rowSums(b)),,drop = FALSE]
+  return(b[,order(as.numeric(colnames(b))),drop = FALSE])
+}
+
+checker <- function(M,Mb,target) {
   
   for (r_ind in 1:dim(Mb)[1]) {
     
-    found <- all(M_sort%*%Mb[r_ind,] == target_sort)
+    found <- all(M%*%t(Mb[r_ind,,drop = FALSE]) == target)
     if (found) {
-      #print("Got one!")
+      print(paste("Got one! On check", r_ind))
       return(sum(Mb[r_ind,]))
     }
   }
@@ -206,21 +307,33 @@ find_presses2 <- function(buttons,target) {
   
 }
 
-# target <- input[[5]][[3]]
-# buttons <- input[[5]][[2]]
-# find_presses2(buttons, target)
 
 tic("Part 2")
 p2_ans_arr <- array(dim = length(input))
 for (ans_i in 1:length(input)) {
+  #ans_i <- 4
+  print(ans_i)
   target <- input[[ans_i]][[3]]
   buttons <- input[[ans_i]][[2]]
   tic()
-  try(p2_ans_arr[ans_i] <- find_presses2(buttons, target))
-  print(ans_i)
+  M <- buttons_matrix(buttons)
+  constraints <- compile_constraints(M,target)
+  costs_start <- 1:length(constraints) |>
+    map_vec(\(x) {
+      find_constraint_order(constraints,x, verbose = FALSE) |>
+        map_vec(~.x$cost) |>
+        prod()
+    })
+  constraints_optim <- find_constraint_order(constraints,min(which(costs_start==min(costs_start))))
+  #cons <- constraints_optim
+  try({
+    Mb <- find_presses2(constraints_optim)
+    # print(sum(Mb[1,]))
+    p2_ans_arr[ans_i] <- checker(M,Mb,target)
+  })
+  gc()
   toc()
 }
 print(p2_ans_arr)
+print(sum(p2_ans_arr))
 toc()
-# can't do 11
-
