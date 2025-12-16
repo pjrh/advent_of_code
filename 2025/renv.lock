@@ -35,6 +35,41 @@
       "Maintainer": "Winston Chang <winston@posit.co>",
       "Repository": "CRAN"
     },
+    "RcppAlgos": {
+      "Package": "RcppAlgos",
+      "Version": "2.9.3",
+      "Source": "Repository",
+      "Title": "High Performance Tools for Combinatorics and Computational Mathematics",
+      "Description": "Provides optimized functions and flexible iterators implemented in C++ for solving problems in combinatorics and computational mathematics. Handles various combinatorial objects including combinations, permutations, integer partitions and compositions, Cartesian products, unordered Cartesian products, and partition of groups. Utilizes the RMatrix class from 'RcppParallel' for thread safety. The combination and permutation functions contain constraint parameters that allow for generation of all results of a vector meeting specific criteria (e.g. finding all combinations such that the sum is between two bounds). Capable of ranking/unranking combinatorial objects efficiently (e.g. retrieve only the nth lexicographical result) which sets up nicely for parallelization as well as random sampling. Gmp support permits exploration where the total number of results is large (e.g. comboSample(10000, 500, n = 4)). Additionally, there are several high performance number theoretic functions that are useful for problems common in computational mathematics. Some of these functions make use of the fast integer division library 'libdivide'. The primeSieve function is based on the segmented sieve of Eratosthenes implementation by Kim Walisch. It is also efficient for large numbers by using the cache friendly improvements originally developed by Tomás Oliveira. Finally, there is a prime counting function that implements Legendre's formula based on the work of Kim Walisch.",
+      "URL": "https://github.com/jwood000/RcppAlgos, https://gmplib.org/, https://github.com/kimwalisch/primesieve, https://libdivide.com, https://github.com/kimwalisch/primecount, https://ridiculousfish.com/, https://sweet.ua.pt/tos/software/prime_sieve.html",
+      "BugReports": "https://github.com/jwood000/RcppAlgos/issues",
+      "LinkingTo": [
+        "cpp11"
+      ],
+      "Imports": [
+        "gmp",
+        "methods"
+      ],
+      "Suggests": [
+        "testthat",
+        "partitions",
+        "microbenchmark",
+        "knitr",
+        "RcppBigIntAlgos",
+        "rmarkdown"
+      ],
+      "Config/Needs/website": "pkgdown",
+      "License": "GPL (>= 2)",
+      "SystemRequirements": "gmp (>= 4.2.3)",
+      "VignetteBuilder": "knitr",
+      "NeedsCompilation": "yes",
+      "Authors@R": "c( person( given = \"Joseph\", family = \"Wood\", role = c(\"aut\", \"cre\"), email = \"jwood000@gmail.com\" ) )",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.2.3",
+      "Author": "Joseph Wood [aut, cre]",
+      "Maintainer": "Joseph Wood <jwood000@gmail.com>",
+      "Repository": "CRAN"
+    },
     "bit": {
       "Package": "bit",
       "Version": "4.6.0",
@@ -414,6 +449,36 @@
       "Author": "Jim Hester [aut] (<https://orcid.org/0000-0002-2739-7082>), Jennifer Bryan [aut, cre] (<https://orcid.org/0000-0002-6983-2759>), Posit Software, PBC [cph, fnd]",
       "Maintainer": "Jennifer Bryan <jenny@posit.co>",
       "Repository": "CRAN"
+    },
+    "gmp": {
+      "Package": "gmp",
+      "Version": "0.7-5",
+      "Source": "Repository",
+      "Date": "2024-08-23",
+      "Title": "Multiple Precision Arithmetic",
+      "Authors@R": "c(person(\"Antoine\",\"Lucas\",role = c(\"aut\",\"cre\"), email = \"antoinelucas@gmail.com\", comment = c(ORCID=\"0000-0002-8059-9767\")), person(\"Immanuel\",\"Scholz\", role= \"aut\"), person(\"Rainer\",\"Boehme\", role = \"ctb\", email= \"rb-gmp@reflex-studio.de\"), person(\"Sylvain\",\"Jasson\", role = \"ctb\", email= \"Sylvain.Jasson@inrae.fr\"), person(\"Martin\", \"Maechler\", role = \"ctb\", email=\"maechler@stat.math.ethz.ch\"))",
+      "Maintainer": "Antoine Lucas <antoinelucas@gmail.com>",
+      "Description": "Multiple Precision Arithmetic (big integers and rationals, prime number tests, matrix computation), \"arithmetic without limitations\" using the C library GMP (GNU Multiple Precision Arithmetic).",
+      "Depends": [
+        "R (>= 3.5.0)"
+      ],
+      "Imports": [
+        "methods"
+      ],
+      "Suggests": [
+        "Rmpfr",
+        "MASS",
+        "round"
+      ],
+      "SystemRequirements": "gmp (>= 4.2.3)",
+      "License": "GPL (>= 2)",
+      "BuildResaveData": "no",
+      "LazyDataNote": "not available, as we use data/*.R *and* our classes",
+      "NeedsCompilation": "yes",
+      "URL": "https://forgemia.inra.fr/sylvain.jasson/gmp",
+      "Author": "Antoine Lucas [aut, cre] (<https://orcid.org/0000-0002-8059-9767>), Immanuel Scholz [aut], Rainer Boehme [ctb], Sylvain Jasson [ctb], Martin Maechler [ctb]",
+      "Repository": "CRAN",
+      "Encoding": "UTF-8"
     },
     "hms": {
       "Package": "hms",
